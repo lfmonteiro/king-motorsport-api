@@ -128,7 +128,7 @@ const enviarOS = async (req, res) => {
 
   try {
     const result = await resend.emails.send({
-      from: "King Motorsport <onboarding@resend.dev>",
+      from: "King Motorsport <noreply@uuriniesel.resend.app>",
       to: emailDestino,
       subject: `OS #${String(os.numero).padStart(2, "0")} — ${cliente?.nome} · ${veiculo?.placa}`,
       html,
