@@ -7,6 +7,7 @@ const conectar = require("./database");
 const clientesRoutes = require("./routes/clientes");
 const veiculosRoutes = require("./routes/veiculos");
 const ordensRoutes = require("./routes/ordens");
+const emailRoutes = require("./routes/email");
 
 const app = express();
 
@@ -20,7 +21,7 @@ app.get("/", (req, res) => {
     status: "online",
     sistema: "King Motorsport API",
     versao: "1.0.0",
-    rotas: ["/clientes", "/veiculos", "/ordens", "/ordens/dashboard"],
+    rotas: ["/clientes", "/veiculos", "/ordens", "/ordens/dashboard", "/email/os"],
   });
 });
 
@@ -28,6 +29,7 @@ app.get("/", (req, res) => {
 app.use("/clientes", clientesRoutes);
 app.use("/veiculos", veiculosRoutes);
 app.use("/ordens", ordensRoutes);
+app.use("/email", emailRoutes);
 
 // ─── Handler de rotas não encontradas ────────────────────────────────────────
 app.use((req, res) => {
