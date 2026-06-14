@@ -127,13 +127,18 @@ const enviarOS = async (req, res) => {
 </body></html>`;
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: "King Motorsport <onboarding@resend.dev>",
       to: emailDestino,
       subject: `OS #${String(os.numero).padStart(2, "0")} — ${cliente?.nome} · ${veiculo?.placa}`,
       html,
     });
-    res.json({ mensagem: "Email enviado com sucesso!" });
+    console.log("Resend result:", JSON.stringify(result));
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return res.status(500).json({ erro: result.error.message || "Erro no Resend" });
+    }
+    res.json({ mensagem: "Email enviado com sucesso!", id: result.data?.id });
   } catch (err) {
     console.error("Erro ao enviar email:", err.message);
     res.status(500).json({ erro: "Falha ao enviar email: " + err.message });
