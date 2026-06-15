@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const itemSchema = new mongoose.Schema(
-  { desc: { type: String, required: true, trim: true }, valor: { type: Number, required: true, min: 0 } },
+  { desc: { type: String, required: true, trim: true }, valor: { type: Number, min: 0, default: 0 } },
   { _id: false }
 );
 

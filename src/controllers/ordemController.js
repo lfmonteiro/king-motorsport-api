@@ -113,7 +113,11 @@ const dashboard = async (req, res) => {
       concluidas: ordens.filter((o) => o.status === "concluida").length,
       faturamento: ordens
         .filter((o) => o.status === "concluida")
-        .reduce((s, o) => s + o.total, 0),
+        .reduce((s, o) => {
+          const maoObra = (o.servicos || []).reduce((a, i) => a + i.valor, 0);
+          const pecasMec = (o.pecasMecanico || []).reduce((a, i) => a + i.valor, 0);
+          return s + maoObra + pecasMec;
+        }, 0),
     };
 
     res.json(resumo);
