@@ -4,9 +4,9 @@ const conectar = require("./database");
 const Usuario = require("./models/Usuario");
 
 const usuarios = [
-  { nome: "Denis", usuario: "denis", senha: "mudar1234", perfil: "admin", primeiroAcesso: true },
-  { nome: "Luiz Moraes", usuario: "luiz", senha: "mudar1234", perfil: "admin", primeiroAcesso: true },
-  { nome: "Leonardo", usuario: "leonardo", senha: "mudar1234", perfil: "mecanico", primeiroAcesso: true },
+  { nome: "Denis Rodrigues", usuario: "denis.rodrigues", senha: "mudar1234", perfil: "admin", primeiroAcesso: true },
+  { nome: "Luiz Moraes", usuario: "luiz.moraes", senha: "mudar1234", perfil: "admin", primeiroAcesso: true },
+  { nome: "Leonardo Silva", usuario: "leonardo.silva", senha: "mudar1234", perfil: "mecanico", primeiroAcesso: true },
 ];
 
 conectar().then(async () => {
