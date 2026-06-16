@@ -9,6 +9,8 @@ const veiculosRoutes = require("./routes/veiculos");
 const ordensRoutes = require("./routes/ordens");
 const emailRoutes = require("./routes/email");
 const agendamentosRoutes = require("./routes/agendamentos");
+const authRoutes = require("./routes/auth");
+const { autenticar } = require("./middleware/auth");
 
 const app = express();
 
@@ -27,11 +29,13 @@ app.get("/", (req, res) => {
 });
 
 // ─── Rotas da API ─────────────────────────────────────────────────────────────
-app.use("/clientes", clientesRoutes);
-app.use("/veiculos", veiculosRoutes);
-app.use("/ordens", ordensRoutes);
-app.use("/email", emailRoutes);
-app.use("/agendamentos", agendamentosRoutes);
+app.use("/auth", authRoutes);                              // público — login
+app.use("/agendamentos/publico", agendamentosRoutes);      // público — agendamento cliente
+app.use("/clientes", autenticar, clientesRoutes);
+app.use("/veiculos", autenticar, veiculosRoutes);
+app.use("/ordens", autenticar, ordensRoutes);
+app.use("/email", autenticar, emailRoutes);
+app.use("/agendamentos", autenticar, agendamentosRoutes);
 
 // ─── Handler de rotas não encontradas ────────────────────────────────────────
 app.use((req, res) => {

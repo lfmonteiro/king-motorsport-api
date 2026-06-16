@@ -10,6 +10,7 @@ const ordensRoutes = require("./routes/ordens");
 const emailRoutes = require("./routes/email");
 const agendamentosRoutes = require("./routes/agendamentos");
 const authRoutes = require("./routes/auth");
+const lancamentosRoutes = require("./routes/lancamentos");
 const { autenticar } = require("./middleware/auth");
 
 const app = express();
@@ -36,6 +37,7 @@ app.use("/veiculos", autenticar, veiculosRoutes);
 app.use("/ordens", autenticar, ordensRoutes);
 app.use("/email", autenticar, emailRoutes);
 app.use("/agendamentos", autenticar, agendamentosRoutes);
+app.use("/lancamentos", autenticar, lancamentosRoutes);
 
 // ─── Handler de rotas não encontradas ────────────────────────────────────────
 app.use((req, res) => {
