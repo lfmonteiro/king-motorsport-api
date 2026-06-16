@@ -8,6 +8,7 @@ const clientesRoutes = require("./routes/clientes");
 const veiculosRoutes = require("./routes/veiculos");
 const ordensRoutes = require("./routes/ordens");
 const emailRoutes = require("./routes/email");
+const agendamentosRoutes = require("./routes/agendamentos");
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/clientes", clientesRoutes);
 app.use("/veiculos", veiculosRoutes);
 app.use("/ordens", ordensRoutes);
 app.use("/email", emailRoutes);
+app.use("/agendamentos", agendamentosRoutes);
 
 // ─── Handler de rotas não encontradas ────────────────────────────────────────
 app.use((req, res) => {
