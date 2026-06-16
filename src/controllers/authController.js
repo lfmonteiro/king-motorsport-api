@@ -115,4 +115,19 @@ const resetarSenha = async (req, res) => {
   }
 };
 
-module.exports = { login, trocarSenha, me, listarUsuarios, criarUsuario, editarUsuario, resetarSenha };
+// DELETE /auth/usuarios/:id — só admin
+const excluirUsuario = async (req, res) => {
+  try {
+    if (req.perfil !== "admin") return res.status(403).json({ erro: "Acesso negado" });
+    const user = await Usuario.findById(req.params.id);
+    if (!user) return res.status(404).json({ erro: "Usuário não encontrado" });
+    // Não permite excluir a si mesmo
+    if (user._id.toString() === req.userId) return res.status(400).json({ erro: "Você não pode excluir seu próprio usuário" });
+    await Usuario.findByIdAndDelete(req.params.id);
+    res.json({ mensagem: "Usuário excluído" });
+  } catch (err) {
+    res.status(500).json({ erro: err.message });
+  }
+};
+
+module.exports = { login, trocarSenha, me, listarUsuarios, criarUsuario, editarUsuario, resetarSenha, excluirUsuario };
