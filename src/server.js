@@ -31,10 +31,9 @@ app.get("/", (req, res) => {
 });
 
 // ─── Rotas da API ─────────────────────────────────────────────────────────────
-app.use("/auth", authRoutes);                              // público — login
-app.use("/agendamentos/publico", agendamentosRoutes);      // público — agendamento cliente
-app.use("/push/vapid-public-key", pushRoutes);             // público — chave VAPID
-app.use("/push", autenticar, pushRoutes);                  // autenticado — subscribe
+app.use("/auth", authRoutes);
+app.use("/agendamentos/publico", agendamentosRoutes);
+app.use("/push", pushRoutes);
 app.use("/clientes", autenticar, clientesRoutes);
 app.use("/veiculos", autenticar, veiculosRoutes);
 app.use("/ordens", autenticar, ordensRoutes);
