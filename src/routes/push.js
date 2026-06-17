@@ -15,10 +15,10 @@ router.post("/subscribe", autenticar, async (req, res) => {
     if (!subscription) return res.status(400).json({ erro: "Subscription obrigatória" });
 
     await PushSubscription.findOneAndUpdate(
-      { usuarioId: req.usuario.id },
+      { usuarioId: req.userId },
       {
-        usuarioId: req.usuario.id,
-        perfil: req.usuario.perfil,
+        usuarioId: req.userId,
+        perfil: req.perfil,
         subscription
       },
       { upsert: true, new: true }
@@ -33,7 +33,7 @@ router.post("/subscribe", autenticar, async (req, res) => {
 // DELETE /push/unsubscribe — remove subscription (autenticado)
 router.delete("/unsubscribe", autenticar, async (req, res) => {
   try {
-    await PushSubscription.findOneAndDelete({ usuarioId: req.usuario.id });
+    await PushSubscription.findOneAndDelete({ usuarioId: req.userId });
     res.json({ mensagem: "Subscription removida!" });
   } catch (err) {
     res.status(500).json({ erro: err.message });

@@ -17,7 +17,6 @@ const notificar = async (titulo, corpo, perfis = ["admin"], dados = {}) => {
       try {
         await webpush.sendNotification(sub.subscription, payload);
       } catch (err) {
-        // Subscription expirada — remove do banco
         if (err.statusCode === 410 || err.statusCode === 404) {
           await PushSubscription.findByIdAndDelete(sub._id);
         }
