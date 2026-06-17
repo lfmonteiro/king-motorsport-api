@@ -11,6 +11,7 @@ const emailRoutes = require("./routes/email");
 const agendamentosRoutes = require("./routes/agendamentos");
 const authRoutes = require("./routes/auth");
 const lancamentosRoutes = require("./routes/lancamentos");
+const pushRoutes = require("./routes/push");
 const { autenticar } = require("./middleware/auth");
 
 const app = express();
@@ -32,6 +33,8 @@ app.get("/", (req, res) => {
 // ─── Rotas da API ─────────────────────────────────────────────────────────────
 app.use("/auth", authRoutes);                              // público — login
 app.use("/agendamentos/publico", agendamentosRoutes);      // público — agendamento cliente
+app.use("/push/vapid-public-key", pushRoutes);             // público — chave VAPID
+app.use("/push", autenticar, pushRoutes);                  // autenticado — subscribe
 app.use("/clientes", autenticar, clientesRoutes);
 app.use("/veiculos", autenticar, veiculosRoutes);
 app.use("/ordens", autenticar, ordensRoutes);
