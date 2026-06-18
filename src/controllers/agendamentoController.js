@@ -3,6 +3,7 @@ const OrdemDeServico = require("../models/OrdemDeServico");
 const Cliente = require("../models/Cliente");
 const Veiculo = require("../models/Veiculo");
 const { notificar } = require("../services/pushService");
+const { notificarAdmin, notificarCliente } = require("../services/whatsappService");
 
 // GET /agendamentos?mes=6&ano=2026
 const listar = async (req, res) => {
@@ -65,11 +66,20 @@ const criarPublico = async (req, res) => {
       origem: "publico", status: "aguardando"
     });
 
-    // Notifica admins sobre agendamento público
+    // Notifica admins — push + WhatsApp
     notificar(
       "📅 Agendamento online recebido!",
       `${nomeCliente} · ${horario} · ${placaVeiculo || modeloVeiculo || "Veículo não informado"}`,
       ["admin"]
+    );
+    notificarAdmin(
+      `🏁 *King Motorsport* — Novo agendamento online!\n\n` +
+      `👤 *Cliente:* ${nomeCliente}\n` +
+      `📞 *Telefone:* ${telefoneCliente || "Não informado"}\n` +
+      `🚗 *Veículo:* ${modeloVeiculo || "Não informado"} — ${placaVeiculo || "Placa não informada"}\n` +
+      `📅 *Data:* ${new Date(data).toLocaleDateString("pt-BR")}\n` +
+      `🕐 *Horário:* ${horario}\n` +
+      `🔧 *Serviço:* ${descricao || "Não informado"}`
     );
 
     res.status(201).json(ag);
@@ -82,17 +92,40 @@ const atualizarStatus = async (req, res) => {
     const { status } = req.body;
     const ag = await Agendamento.findByIdAndUpdate(
       req.params.id, { status }, { new: true }
-    ).populate("clienteId", "nome").populate("veiculoId", "marca modelo placa");
+    ).populate("clienteId", "nome telefone").populate("veiculoId", "marca modelo placa");
     if (!ag) return res.status(404).json({ erro: "Agendamento não encontrado" });
 
     const statusLabel = { "aguardando": "Aguardando", "confirmado": "Confirmado", "cancelado": "Cancelado", "convertido": "Convertido" }[status] || status;
     const nome = ag.clienteId?.nome || ag.nomeCliente || "Cliente";
+    const telefone = ag.clienteId?.telefone || ag.telefoneCliente;
+    const data = new Date(ag.data).toLocaleDateString("pt-BR");
 
     notificar(
       `📅 Agendamento ${statusLabel}`,
       `${nome} · ${ag.horario}`,
       ["admin"]
     );
+
+    // Notifica cliente via WhatsApp quando confirmado ou cancelado
+    if (status === "confirmado" && telefone) {
+      notificarCliente(telefone,
+        `🏁 *King Motorsport* — Agendamento confirmado!\n\n` +
+        `Olá, *${nome}*! Seu agendamento foi *confirmado*.\n\n` +
+        `📅 *Data:* ${data}\n` +
+        `🕐 *Horário:* ${ag.horario}\n` +
+        `🔧 *Serviço:* ${ag.descricao || "Serviço automotivo"}\n\n` +
+        `📍 Rua Djalma Pessolato, 203 — São Paulo/SP\n` +
+        `📞 (11) 95989-1402`
+      );
+    }
+
+    if (status === "cancelado" && telefone) {
+      notificarCliente(telefone,
+        `🏁 *King Motorsport* — Agendamento cancelado\n\n` +
+        `Olá, *${nome}*. Infelizmente seu agendamento do dia *${data}* às *${ag.horario}* foi cancelado.\n\n` +
+        `Entre em contato para reagendar:\n📞 (11) 95989-1402`
+      );
+    }
 
     res.json(ag);
   } catch (err) { res.status(400).json({ erro: err.message }); }
