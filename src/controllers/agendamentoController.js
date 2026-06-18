@@ -48,7 +48,7 @@ const criar = async (req, res) => {
 // Auto-cadastra cliente e veículo se não existirem
 const criarPublico = async (req, res) => {
   try {
-    const { nomeCliente, telefoneCliente, placaVeiculo, modeloVeiculo, anoVeiculo, kmVeiculo, data, horario, duracao, descricao, observacoes } = req.body;
+    const { nomeCliente, telefoneCliente, emailCliente, placaVeiculo, modeloVeiculo, anoVeiculo, kmVeiculo, data, horario, duracao, descricao, observacoes } = req.body;
     if (!nomeCliente || !data || !horario) {
       return res.status(400).json({ erro: "Nome, data e horário são obrigatórios" });
     }
@@ -58,7 +58,7 @@ const criarPublico = async (req, res) => {
     if (telefoneCliente) {
       let cliente = await Cliente.findOne({ telefone: telefoneCliente.replace(/\D/g, "") });
       if (!cliente) {
-        cliente = await Cliente.create({ nome: nomeCliente, telefone: telefoneCliente.replace(/\D/g, "") });
+        cliente = await Cliente.create({ nome: nomeCliente, telefone: telefoneCliente.replace(/\D/g, ""), email: emailCliente || undefined });
       }
       clienteId = cliente._id;
     }
@@ -84,7 +84,7 @@ const criarPublico = async (req, res) => {
     }
 
     const ag = await Agendamento.create({
-      nomeCliente, telefoneCliente, placaVeiculo, modeloVeiculo, anoVeiculo, kmVeiculo,
+      nomeCliente, telefoneCliente, emailCliente, placaVeiculo, modeloVeiculo, anoVeiculo, kmVeiculo,
       data, horario, duracao, descricao, observacoes,
       origem: "publico", status: "aguardando",
       clienteId: clienteId || undefined,
@@ -123,6 +123,24 @@ const atualizarStatus = async (req, res) => {
     const nome = ag.clienteId?.nome || ag.nomeCliente || "Cliente";
     const telefone = ag.clienteId?.telefone || ag.telefoneCliente;
     const dataFmt = new Date(ag.data).toLocaleDateString("pt-BR");
+
+    // Se confirmando — verifica/cria cliente automaticamente
+    if (status === "confirmado" && !ag.clienteId) {
+      const telLimpo = ag.telefoneCliente?.replace(/\D/g, "");
+      if (telLimpo) {
+        let clienteNovo = await Cliente.findOne({ telefone: telLimpo });
+        if (!clienteNovo) {
+          clienteNovo = await Cliente.create({
+            nome: ag.nomeCliente,
+            telefone: telLimpo,
+            email: ag.emailCliente || undefined,
+          });
+        } else if (ag.emailCliente && !clienteNovo.email) {
+          await Cliente.findByIdAndUpdate(clienteNovo._id, { email: ag.emailCliente });
+        }
+        await Agendamento.findByIdAndUpdate(ag._id, { clienteId: clienteNovo._id });
+      }
+    }
 
     notificar(`📅 Agendamento ${statusLabel}`, `${nome} · ${ag.horario}`, ["admin"]);
 
