@@ -32,13 +32,12 @@ app.get("/", (req, res) => {
 
 // ─── Rotas da API ─────────────────────────────────────────────────────────────
 app.use("/auth", authRoutes);
-app.use("/agendamentos/publico", agendamentosRoutes);
 app.use("/push", pushRoutes);
+app.use("/agendamentos", agendamentosRoutes);          // público + autenticado no mesmo router
 app.use("/clientes", autenticar, clientesRoutes);
 app.use("/veiculos", autenticar, veiculosRoutes);
 app.use("/ordens", autenticar, ordensRoutes);
 app.use("/email", autenticar, emailRoutes);
-app.use("/agendamentos", autenticar, agendamentosRoutes);
 app.use("/lancamentos", autenticar, lancamentosRoutes);
 
 // ─── Handler de rotas não encontradas ────────────────────────────────────────
