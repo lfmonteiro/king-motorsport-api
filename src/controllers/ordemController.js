@@ -1,8 +1,8 @@
 const OrdemDeServico = require("../models/OrdemDeServico");
 const Lancamento = require("../models/Lancamento");
 const { notificar } = require("../services/pushService");
+const { notificarAdmin, notificarCliente } = require("../services/whatsappService");
 
-// GET /ordens — lista todas (com filtros opcionais)
 const listar = async (req, res) => {
   try {
     const filtro = {};
@@ -17,7 +17,6 @@ const listar = async (req, res) => {
   } catch (err) { res.status(500).json({ erro: err.message }); }
 };
 
-// GET /ordens/:id
 const buscarPorId = async (req, res) => {
   try {
     const ordem = await OrdemDeServico.findById(req.params.id)
@@ -28,7 +27,6 @@ const buscarPorId = async (req, res) => {
   } catch (err) { res.status(500).json({ erro: err.message }); }
 };
 
-// POST /ordens — cria nova OS
 const criar = async (req, res) => {
   try {
     const ordem = await OrdemDeServico.create(req.body);
@@ -47,11 +45,20 @@ const criar = async (req, res) => {
       ["mecanico"]
     );
 
+    // WhatsApp para admin
+    notificarAdmin(
+      `🏁 *King Motorsport* — Nova OS criada!\n\n` +
+      `📋 *OS #${String(populada.numero).padStart(2, "0")}*\n` +
+      `👤 *Cliente:* ${populada.clienteId?.nome}\n` +
+      `🚗 *Veículo:* ${populada.veiculoId?.marca} ${populada.veiculoId?.modelo} — ${populada.veiculoId?.placa}\n` +
+      `🔧 *Serviço:* ${populada.descricao}\n\n` +
+      `🔗 https://kingmotorsport.netlify.app`
+    );
+
     res.status(201).json(populada);
   } catch (err) { res.status(400).json({ erro: err.message }); }
 };
 
-// PUT /ordens/:id — atualiza OS
 const atualizar = async (req, res) => {
   try {
     const ordem = await OrdemDeServico.findByIdAndUpdate(req.params.id, req.body, {
@@ -64,7 +71,6 @@ const atualizar = async (req, res) => {
   } catch (err) { res.status(400).json({ erro: err.message }); }
 };
 
-// PATCH /ordens/:id/status — atualiza só o status
 const atualizarStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -72,7 +78,7 @@ const atualizarStatus = async (req, res) => {
     if (!statusValidos.includes(status)) return res.status(400).json({ erro: "Status inválido" });
 
     const ordem = await OrdemDeServico.findById(req.params.id)
-      .populate("clienteId", "nome")
+      .populate("clienteId", "nome telefone")
       .populate("veiculoId", "marca modelo placa");
     if (!ordem) return res.status(404).json({ erro: "Ordem não encontrada" });
 
@@ -82,40 +88,38 @@ const atualizarStatus = async (req, res) => {
 
     const statusLabel = { "aberta": "Aberta", "em-andamento": "Em Andamento", "concluida": "Concluída", "cancelada": "Cancelada" }[status];
 
-    notificar(
-      `🔄 OS #${String(ordem.numero).padStart(2, "0")} — ${statusLabel}`,
-      `${ordem.clienteId?.nome} · ${ordem.veiculoId?.placa}`,
-      ["admin"]
-    );
-    notificar(
-      `🔄 OS #${String(ordem.numero).padStart(2, "0")} — ${statusLabel}`,
-      `${ordem.descricao}`,
-      ["mecanico"]
-    );
+    notificar(`🔄 OS #${String(ordem.numero).padStart(2, "0")} — ${statusLabel}`, `${ordem.clienteId?.nome} · ${ordem.veiculoId?.placa}`, ["admin"]);
+    notificar(`🔄 OS #${String(ordem.numero).padStart(2, "0")} — ${statusLabel}`, `${ordem.descricao}`, ["mecanico"]);
 
-    // Se concluída, cria lançamento automático no caixa
+    // Se concluída — lançamento + WhatsApp para cliente
     if (status === "concluida" && statusAnterior !== "concluida") {
       const jaExiste = await Lancamento.findOne({ osId: ordem._id });
       if (!jaExiste) {
-        const total = [
-          ...(ordem.servicos || []),
-          ...(ordem.pecasMecanico || [])
-        ].reduce((s, i) => s + Number(i.valor || 0), 0);
+        const total = [...(ordem.servicos || []), ...(ordem.pecasMecanico || [])]
+          .reduce((s, i) => s + Number(i.valor || 0), 0);
 
         if (total > 0) {
           await Lancamento.create({
-            tipo: "entrada",
-            valor: total,
+            tipo: "entrada", valor: total,
             descricao: `OS #${String(ordem.numero).padStart(2, "0")} — ${ordem.descricao}`,
-            categoria: "os",
-            data: new Date(),
-            osId: ordem._id,
-            origem: "os"
+            categoria: "os", data: new Date(), osId: ordem._id, origem: "os"
           });
-          notificar(
-            "💰 Caixa atualizado",
-            `OS #${String(ordem.numero).padStart(2, "0")} concluída — entrada registrada`,
-            ["admin"]
+          notificar("💰 Caixa atualizado", `OS #${String(ordem.numero).padStart(2, "0")} concluída — entrada registrada`, ["admin"]);
+        }
+
+        // WhatsApp para o cliente
+        const telefone = ordem.clienteId?.telefone;
+        if (telefone) {
+          const totalFmt = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+          notificarCliente(telefone,
+            `🏁 *King Motorsport* — Veículo pronto!\n\n` +
+            `Olá, *${ordem.clienteId?.nome}*! Seu veículo *${ordem.veiculoId?.placa}* está pronto para retirada.\n\n` +
+            `📋 *OS #${String(ordem.numero).padStart(2, "0")}*\n` +
+            `🔧 *Serviço:* ${ordem.descricao}\n` +
+            `💰 *Total:* ${totalFmt}\n\n` +
+            `📍 Rua Djalma Pessolato, 203 — São Paulo/SP\n` +
+            `📞 (11) 95989-1402\n\n` +
+            `_Agradecemos a preferência! 🏎️_`
           );
         }
       }
@@ -125,7 +129,6 @@ const atualizarStatus = async (req, res) => {
   } catch (err) { res.status(500).json({ erro: err.message }); }
 };
 
-// DELETE /ordens/:id
 const remover = async (req, res) => {
   try {
     const ordem = await OrdemDeServico.findByIdAndDelete(req.params.id);
@@ -134,7 +137,6 @@ const remover = async (req, res) => {
   } catch (err) { res.status(500).json({ erro: err.message }); }
 };
 
-// GET /ordens/dashboard
 const dashboard = async (req, res) => {
   try {
     const [totalClientes, totalVeiculos, ordens] = await Promise.all([
@@ -149,9 +151,7 @@ const dashboard = async (req, res) => {
       emAndamento: ordens.filter((o) => o.status === "em-andamento").length,
       concluidas: ordens.filter((o) => o.status === "concluida").length,
       faturamento: ordens.filter((o) => o.status === "concluida").reduce((s, o) => {
-        const maoObra = (o.servicos || []).reduce((a, i) => a + i.valor, 0);
-        const pecasMec = (o.pecasMecanico || []).reduce((a, i) => a + i.valor, 0);
-        return s + maoObra + pecasMec;
+        return s + (o.servicos || []).reduce((a, i) => a + i.valor, 0) + (o.pecasMecanico || []).reduce((a, i) => a + i.valor, 0);
       }, 0),
     };
     res.json(resumo);
