@@ -34,7 +34,7 @@ app.get("/", (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/push", pushRoutes);
 app.use("/agendamentos", agendamentosRoutes);          // público + autenticado no mesmo router
-app.use("/clientes", autenticar, clientesRoutes);
+app.use("/clientes", clientesRoutes);
 app.use("/veiculos", autenticar, veiculosRoutes);
 app.use("/ordens", autenticar, ordensRoutes);
 app.use("/email", autenticar, emailRoutes);
