@@ -7,8 +7,10 @@ const ADMIN_NUMERO = process.env.WHATSAPP_ADMIN || "5511981001443";
 
 const enviarMensagem = async (numero, mensagem) => {
   try {
-    const num = numero.replace(/\D/g, "");
+    let num = numero.replace(/\D/g, "");
     if (!num || num.length < 10) return;
+    // Garante código do país 55 (Brasil)
+    if (!num.startsWith("55")) num = "55" + num;
 
     console.log(`📱 WhatsApp → ${num}: ${mensagem.substring(0, 50)}...`);
 
