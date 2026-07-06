@@ -36,6 +36,11 @@ app.use("/push", pushRoutes);
 app.use("/agendamentos", agendamentosRoutes);          // público + autenticado no mesmo router
 app.use("/clientes", clientesRoutes);
 app.use("/veiculos", autenticar, veiculosRoutes);
+
+// Rota pública de recibo — sem autenticação
+const { buscarReciboPublico } = require("./controllers/ordemController");
+app.get("/ordens/publica/:id", buscarReciboPublico);
+
 app.use("/ordens", autenticar, ordensRoutes);
 app.use("/email", autenticar, emailRoutes);
 app.use("/lancamentos", autenticar, lancamentosRoutes);
