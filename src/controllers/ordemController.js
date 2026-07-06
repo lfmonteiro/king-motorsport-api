@@ -158,4 +158,14 @@ const dashboard = async (req, res) => {
   } catch (err) { res.status(500).json({ erro: err.message }); }
 };
 
-module.exports = { listar, buscarPorId, criar, atualizar, atualizarStatus, remover, dashboard };
+const buscarReciboPublico = async (req, res) => {
+  try {
+    const ordem = await OrdemDeServico.findById(req.params.id)
+      .populate("clienteId", "nome telefone cpf email endereco")
+      .populate("veiculoId", "marca modelo placa ano cor km");
+    if (!ordem) return res.status(404).json({ erro: "Ordem não encontrada" });
+    res.json(ordem);
+  } catch (err) { res.status(500).json({ erro: err.message }); }
+};
+
+module.exports = { listar, buscarPorId, criar, atualizar, atualizarStatus, remover, dashboard, buscarReciboPublico };
