@@ -111,14 +111,12 @@ const atualizarStatus = async (req, res) => {
         const telefone = ordem.clienteId?.telefone;
         if (telefone) {
           const totalFmt = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-          const linkRecibo = `https://kingmotorsport.pages.dev/recibo/${ordem._id}`;
           notificarCliente(telefone,
             `🏁 *King Motorsport* — Veículo pronto!\n\n` +
             `Olá, *${ordem.clienteId?.nome}*! Seu veículo *${ordem.veiculoId?.placa}* está pronto para retirada.\n\n` +
             `📋 *OS #${String(ordem.numero).padStart(2, "0")}*\n` +
             `🔧 *Serviço:* ${ordem.descricao}\n` +
             `💰 *Total:* ${totalFmt}\n\n` +
-            `📄 *Seu recibo:*\n${linkRecibo}\n\n` +
             `📍 Rua Djalma Pessolato, 203 — São Paulo/SP\n` +
             `📞 (11) 95989-1402\n\n` +
             `_Agradecemos a preferência! 🏎️_`
