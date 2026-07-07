@@ -60,8 +60,86 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3001;
 
 conectar().then(() => {
+  agendarJobRevisao();
   app.listen(PORT, () => {
     console.log(`🚀 King Motorsport API rodando na porta ${PORT}`);
     console.log(`📋 Health check: http://localhost:${PORT}`);
   });
 });
+
+// ─── Job diário — lembrete de revisão por tempo ──────────────────────────────
+const { notificarCliente, notificarAdmin } = require("./services/whatsappService");
+const OrdemDeServico = require("./models/OrdemDeServico");
+
+const executarLembretesRevisao = async () => {
+  try {
+    console.log("⏰ Verificando lembretes de revisão...");
+    const MESES = 6;
+    const limite = new Date();
+    limite.setMonth(limite.getMonth() - MESES);
+
+    // OS concluídas há mais de X meses que têm proximaRevisao definido
+    const ordens = await OrdemDeServico.find({
+      status: "concluida",
+      updatedAt: { $lte: limite },
+      proximaRevisao: { $exists: true, $ne: "" },
+    })
+      .populate("clienteId", "nome telefone")
+      .populate("veiculoId", "marca modelo placa");
+
+    // Verifica se já houve uma OS mais recente para o mesmo veículo
+    let enviados = 0;
+    for (const os of ordens) {
+      const osRecente = await OrdemDeServico.findOne({
+        veiculoId: os.veiculoId?._id,
+        createdAt: { $gt: os.updatedAt },
+      });
+      if (osRecente) continue; // já voltou para revisão
+
+      const telefone = os.clienteId?.telefone;
+      const nome = os.clienteId?.nome;
+      const placa = os.veiculoId?.placa;
+      const modelo = `${os.veiculoId?.marca || ""} ${os.veiculoId?.modelo || ""}`.trim();
+
+      if (telefone && nome) {
+        notificarCliente(telefone,
+          `🔔 *King Motorsport* — Hora da revisão!\n\n` +
+          `Olá, *${nome}*! Faz mais de ${MESES} meses desde a última revisão do seu veículo *${modelo} (${placa})*.\n\n` +
+          `Recomendamos verificar:\n` +
+          `• Óleo e filtros\n` +
+          `• Freios e pneus\n` +
+          `• Fluidos em geral\n\n` +
+          `📅 Agende agora:\n🔗 https://kingmotorsport.pages.dev/agendar\n📞 (11) 95989-1402\n\n` +
+          `_King Motorsport — Cuidando do seu veículo! 🏎️_`
+        );
+        enviados++;
+        await new Promise(r => setTimeout(r, 1000)); // delay entre envios
+      }
+    }
+
+    if (enviados > 0) {
+      notificarAdmin(`📊 *Lembretes de revisão enviados:* ${enviados} clientes notificados hoje.`);
+    }
+    console.log(`✅ Lembretes de revisão: ${enviados} enviados.`);
+  } catch (err) {
+    console.error("Erro no job de revisão:", err.message);
+  }
+};
+
+// Roda uma vez ao iniciar (após 30s) e depois todo dia às 9h
+const agendarJobRevisao = () => {
+  setTimeout(async () => {
+    await executarLembretesRevisao();
+    // Agendar para rodar diariamente
+    const agendarProximo = () => {
+      const agora = new Date();
+      const proximo = new Date();
+      proximo.setHours(9, 0, 0, 0);
+      if (proximo <= agora) proximo.setDate(proximo.getDate() + 1);
+      const ms = proximo - agora;
+      console.log(`⏰ Próximo lembrete de revisão em ${Math.round(ms / 3600000)}h`);
+      setTimeout(async () => { await executarLembretesRevisao(); agendarProximo(); }, ms);
+    };
+    agendarProximo();
+  }, 30000);
+};

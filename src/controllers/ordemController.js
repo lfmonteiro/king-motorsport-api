@@ -45,15 +45,60 @@ const criar = async (req, res) => {
       ["mecanico"]
     );
 
-    // WhatsApp para admin
     notificarAdmin(
       `🏁 *King Motorsport* — Nova OS criada!\n\n` +
       `📋 *OS #${String(populada.numero).padStart(2, "0")}*\n` +
       `👤 *Cliente:* ${populada.clienteId?.nome}\n` +
       `🚗 *Veículo:* ${populada.veiculoId?.marca} ${populada.veiculoId?.modelo} — ${populada.veiculoId?.placa}\n` +
       `🔧 *Serviço:* ${populada.descricao}\n\n` +
-      `🔗 https://kingmotorsport.netlify.app`
+      `🔗 https://kingmotorsport.pages.dev`
     );
+
+    // ─── Verificar lembrete de revisão por KM ───────────────────────────────
+    try {
+      const kmAtual = Number(req.body.km);
+      if (kmAtual > 0 && populada.veiculoId?._id) {
+        const ultimaOS = await OrdemDeServico.findOne({
+          veiculoId: populada.veiculoId._id,
+          status: "concluida",
+          proximaRevisao: { $exists: true, $ne: "" },
+          _id: { $ne: ordem._id }
+        })
+          .populate("clienteId", "nome telefone")
+          .sort({ createdAt: -1 });
+
+        if (ultimaOS?.proximaRevisao) {
+          const kmRevisao = Number(ultimaOS.proximaRevisao.replace(/\./g, "").replace(",", "."));
+          if (!isNaN(kmRevisao) && kmAtual >= kmRevisao) {
+            const telefone = populada.clienteId?.telefone;
+            const nome = populada.clienteId?.nome;
+            const placa = populada.veiculoId?.placa;
+            const kmFmt = kmAtual.toLocaleString("pt-BR");
+            const kmRevFmt = kmRevisao.toLocaleString("pt-BR");
+
+            if (telefone) {
+              notificarCliente(telefone,
+                `🔔 *King Motorsport* — Lembrete de revisão!\n\n` +
+                `Olá, *${nome}*! Identificamos que seu veículo *${placa}* atingiu *${kmFmt} km* e estava previsto para revisão aos *${kmRevFmt} km*.\n\n` +
+                `Agende sua revisão agora:\n📞 (11) 95989-1402\n🔗 https://kingmotorsport.pages.dev/agendar\n\n` +
+                `_King Motorsport — Cuidando do seu veículo! 🏎️_`
+              );
+            }
+
+            notificarAdmin(
+              `⚠️ *Lembrete de revisão disparado!*\n\n` +
+              `👤 *Cliente:* ${nome}\n` +
+              `🚗 *Veículo:* ${placa}\n` +
+              `📍 *KM atual:* ${kmFmt}\n` +
+              `📍 *KM revisão:* ${kmRevFmt}`
+            );
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao verificar lembrete de revisão:", e.message);
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     res.status(201).json(populada);
   } catch (err) { res.status(400).json({ erro: err.message }); }
@@ -91,7 +136,6 @@ const atualizarStatus = async (req, res) => {
     notificar(`🔄 OS #${String(ordem.numero).padStart(2, "0")} — ${statusLabel}`, `${ordem.clienteId?.nome} · ${ordem.veiculoId?.placa}`, ["admin"]);
     notificar(`🔄 OS #${String(ordem.numero).padStart(2, "0")} — ${statusLabel}`, `${ordem.descricao}`, ["mecanico"]);
 
-    // Se concluída — lançamento + WhatsApp para cliente
     if (status === "concluida" && statusAnterior !== "concluida") {
       const jaExiste = await Lancamento.findOne({ osId: ordem._id });
       if (!jaExiste) {
@@ -107,7 +151,6 @@ const atualizarStatus = async (req, res) => {
           notificar("💰 Caixa atualizado", `OS #${String(ordem.numero).padStart(2, "0")} concluída — entrada registrada`, ["admin"]);
         }
 
-        // WhatsApp para o cliente
         const telefone = ordem.clienteId?.telefone;
         if (telefone) {
           const totalFmt = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
