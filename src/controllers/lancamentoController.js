@@ -80,4 +80,16 @@ const remover = async (req, res) => {
   }
 };
 
-module.exports = { listar, criar, importarOS, remover };
+module.exports = { listar, criar, importarOS, remover, removerAdmin };
+
+// DELETE /lancamentos/admin/:id — admin pode excluir qualquer lançamento incluindo OS
+const removerAdmin = async (req, res) => {
+  try {
+    if (req.perfil !== "admin") return res.status(403).json({ erro: "Acesso negado" });
+    const l = await Lancamento.findByIdAndDelete(req.params.id);
+    if (!l) return res.status(404).json({ erro: "Lançamento não encontrado" });
+    res.json({ mensagem: "Lançamento removido pelo admin" });
+  } catch (err) {
+    res.status(500).json({ erro: err.message });
+  }
+};
