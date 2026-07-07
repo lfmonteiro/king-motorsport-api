@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const pushSubscriptionSchema = new mongoose.Schema({
   subscription: { type: Object, required: true },
   perfil: { type: String, enum: ["admin", "mecanico"], default: "admin" },
-  usuario: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario" },
+  usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario" },
   criadoEm: { type: Date, default: Date.now },
 });
 
