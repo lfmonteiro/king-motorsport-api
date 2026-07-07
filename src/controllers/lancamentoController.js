@@ -15,10 +15,8 @@ const listar = async (req, res) => {
     const lancamentos = await Lancamento.find(filtro)
       .populate("osId", "numero descricao")
       .sort({ data: -1 });
-
     const entradas = lancamentos.filter(l => l.tipo === "entrada").reduce((s, l) => s + l.valor, 0);
     const saidas = lancamentos.filter(l => l.tipo === "saida").reduce((s, l) => s + l.valor, 0);
-
     res.json({ lancamentos, entradas, saidas, saldo: entradas - saidas });
   } catch (err) {
     res.status(500).json({ erro: err.message });
@@ -35,23 +33,16 @@ const criar = async (req, res) => {
   }
 };
 
-// POST /lancamentos/importar-os — importa OS concluídas como entradas
+// POST /lancamentos/importar-os
 const importarOS = async (req, res) => {
   try {
     const { osId } = req.body;
     const os = await OrdemDeServico.findById(osId);
     if (!os) return res.status(404).json({ erro: "OS não encontrada" });
     if (os.status !== "concluida") return res.status(400).json({ erro: "OS ainda não foi concluída" });
-
-    // Verifica se já foi importada
     const jaImportada = await Lancamento.findOne({ osId });
     if (jaImportada) return res.status(400).json({ erro: "Esta OS já foi importada para o caixa" });
-
-    const total = [
-      ...(os.servicos || []),
-      ...(os.pecasMecanico || [])
-    ].reduce((s, i) => s + i.valor, 0);
-
+    const total = [...(os.servicos || []), ...(os.pecasMecanico || [])].reduce((s, i) => s + i.valor, 0);
     const l = await Lancamento.create({
       tipo: "entrada",
       valor: total,
@@ -80,9 +71,7 @@ const remover = async (req, res) => {
   }
 };
 
-module.exports = { listar, criar, importarOS, remover, removerAdmin };
-
-// DELETE /lancamentos/admin/:id — admin pode excluir qualquer lançamento incluindo OS
+// DELETE /lancamentos/admin/:id — admin pode excluir qualquer lançamento
 const removerAdmin = async (req, res) => {
   try {
     if (req.perfil !== "admin") return res.status(403).json({ erro: "Acesso negado" });
@@ -93,3 +82,5 @@ const removerAdmin = async (req, res) => {
     res.status(500).json({ erro: err.message });
   }
 };
+
+module.exports = { listar, criar, importarOS, remover, removerAdmin };
